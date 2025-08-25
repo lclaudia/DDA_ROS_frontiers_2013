@@ -1,4 +1,4 @@
-DDA software
+This software reproduces the 2013 Frontiers paper "Non-linear dynamical classification of short time series of the Rössler system in high noise regimes"
 
 It was tested on linux, mac, and windows and julia 1.11.5 (https://julialang.org/).
 
