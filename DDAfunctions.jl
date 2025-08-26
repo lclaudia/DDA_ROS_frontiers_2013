@@ -25,6 +25,9 @@ using Graphs
 using GraphRecipes
 using JLD2
 
+using Random: shuffle
+
+
 
 if Sys.iswindows()
    SL="\\";
@@ -199,6 +202,102 @@ function make_MODEL(SYST)
    return MODEL, L_AF, order
 end
 
+function make_MOD_new_new(N_MOD,nr_delays,order)
+
+    # MOD,P_ODE,SSYM=make_MOD_new_new(N_MOD,nr_delays,order);
+
+    # Claudia 06/16/2015 Matlab
+    # Claudia 08/17/2023 Julia
+    # Claudia 01/27/2024
+
+    #nr_delays=2; order=3; N_MOD=2:3;
+    #nr_delays=2; order=2; N_MOD=3;
+
+    if nr_delays!=2
+       println("only nr_delays=2 supported");
+       global nr_delays
+       nr_delays=2;
+    end
+
+    P_DDA=monomial_list(nr_delays,order); L=size(P_DDA,1);
+
+    PP = -P_DDA;
+    PP[PP.==-1].=2;
+    PP[PP.==-2].=1;
+    PP=sort(PP,dims=2);
+
+    as_ints(a::AbstractArray{CartesianIndex{L}}) where L = reshape(reinterpret(Int, a), (L, size(a)...));
+
+    f=fill(0,size(P_DDA,1),2);
+    for k1=1:size(P_DDA,1)
+        f[k1,1]=k1;
+        ff = findall(x -> x ==0, sum(abs.(P_DDA-repeat(PP[k1,:],1,size(PP,1))'),dims=2));
+        if length(ff)>0
+           f[k1,2]=as_ints(ff)[1];
+        end
+    end
+
+    MOD=fill(0,1,size(P_DDA,1))
+    for n_N = 1:length(N_MOD)
+        N = N_MOD[n_N];
+        C = collect(combinations(1:L, N));
+        C = reshape(collect(Iterators.flatten(C)),(size(C[1],1),size(C,1)))';
+        M = zeros(Int, size(C, 1), L);
+
+        for c = 1:size(C, 1)
+            M[c, C[c, :]] .= 1
+        end
+
+        M1=sort(M.*reshape(repeat(1:L,size(M,1)),(size(M,2),size(M,1)))',dims=2)[:,end-N+1:end];
+        M2=-M1;
+
+        for k1=1:size(f,1)
+            M2[M2.==-f[k1,1]].=f[k1,2];
+        end
+        M2=sort(M2,dims=2);
+
+        f2=fill(0,size(M1,1),2);
+        for k1=1:size(M1,1)
+            f2[k1,1]=k1;
+            ff = findall(x -> x ==0, sum(abs.(M1-repeat(M2[k1,:],1,size(M2,1))'),dims=2));
+            if length(ff)>0
+               f2[k1,2]=as_ints(ff)[1];
+            end
+        end
+        f2=sort(f2,dims=2);
+        f2=unique(f2,dims=1);
+        f2=f2[f2[:,1].!=f2[:,2],2];
+        f2=setdiff(1:size(M1,1),f2);
+        #M1=M1[f2,:];
+
+        MOD=[MOD;M[f2,:]];
+    end
+    MOD=MOD[2:end,:];
+
+    SSYM = fill(-1, size(MOD, 1), 2);
+    for n_M=1:size(MOD,1)
+        p=P_DDA[findall(x->x==1,MOD[n_M,:]),:];
+
+        SSYM[n_M,1]=length(unique([value for value in p if value > 0]));
+
+        p=convert(Matrix{Float64},p); p[p .== 0] .= NaN;
+        p1=mod.(p.+2,2).+1;
+        p1[isnan.(p1)].=0;p1=Int.(p1);
+        p[isnan.(p)].=0;p=Int.(p);
+
+        p1=sort!(p1,dims=2);
+        p1=sortslices(p1,dims=1);
+
+        if sum(abs.(p-p1))==0
+           SSYM[n_M,2]=1;
+        else
+           SSYM[n_M,2]=0;
+        end
+    end
+
+    return MOD,P_DDA,SSYM
+end
+
 
 function add_noise(s,SNR)
 
@@ -256,7 +355,7 @@ end
     
 
 function generate_TR(M,N)
-   TR=randperm(M);TR=repeat(sort(TR[1:N].-1),1,M)';
+   TR=shuffle(1:M);TR=repeat(sort(TR[1:N].-1),1,M)';
    for k=2:M
        TR[k,:]=TR[k-1,:].+1;
    end
@@ -301,7 +400,7 @@ function make__TR_TS__subj(NN,N_cv,TR_TS_FILE="TRTS.ascii",TR_NUM=nothing)
         
            MinMax=1000;
            for k=1:1000
-               r1=randperm(M); r1=r1[1:(N_cv-size(TR,1))];
+               r1=shuffle(1:M); r1=r1[1:(N_cv-size(TR,1))];
                r=TR1[r1,:];  
                #histogram(r[:], bins=1:M, legend=false)
                h1 = fit(Histogram, vec(r), collect(1:M + 1)); h2 = h1.weights;
