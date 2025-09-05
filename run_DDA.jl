@@ -3,6 +3,10 @@
 include("setup_DDA.jl");                                               # setup parameters and 
                                                                        # define set of Julia functions
 
+if isfile("b_values.jld2")
+   @load "b_values.jld2"                                               # load the b-values if file exists
+end
+
 for mm = shuffle(1:size(MOD,1))                                        # loop over randomized model numbers
     println(mm);
 

@@ -3,15 +3,18 @@
 #include("DDAfunctions.jl");                                           # set of Julia functions
 
 if !isfile("b_values.jld2")
-   b=collect(LinRange(.37,.44,1000));b=b[randperm(1000)];b1=sort(b[1:9]);
-   b=collect(LinRange(.46,.49,1000));b=b[randperm(1000)];b2=sort(b[1:9]);
+   using Random
+
+   b=collect(LinRange(.37,.44,1000));b=b[shuffle(1:1000)];b1=sort(b[1:9]);
+   b=collect(LinRange(.46,.49,1000));b=b[shuffle(1:1000)];b2=sort(b[1:9]);
                                                                        # randomly generate "subjects"
                                                                        # i.e.: 9 b-values for 2 conditions 
    
    COND=[1 2];bList=[b1 b2]';
    
    @save "b_values.jld2" COND bList                                    # save values if file does not exist 
-else
+end
+if isfile("b_values.jld2")
    @load "b_values.jld2"                                               # load the b-values if file exists
 end
 

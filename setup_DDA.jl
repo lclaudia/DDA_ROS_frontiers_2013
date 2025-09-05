@@ -16,7 +16,6 @@ DELAYS=collect(1:TM);                                                  # all pos
 
 make_TAU_ALL(SSYM,DELAYS);                                             # make delay files for each symmetry
 
-@load "b_values.jld2"                                                  # load the b-values
 N_Trial=50;
 
 SNR=5;                                                                 # signal to noise ratio in dB
